@@ -1,6 +1,7 @@
 package de.berlin.htw.boundary;
 
 import jakarta.inject.Inject;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -56,7 +57,8 @@ public class BasketResource {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
     	
-        return basket.todo();
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+        return basket.getBasket(user.getId());
     }
 
     @DELETE
@@ -66,7 +68,9 @@ public class BasketResource {
     public void clearBasket() {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
-    	// no content
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	basket.clearBasket(user.getId());
     }
 
     @POST
@@ -101,8 +105,18 @@ public class BasketResource {
             @Parameter(description = "The item to add in the basket", required = true) @jakarta.validation.Valid final Item item) {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
-    	// return basket with remaining balance
-        return Response.status(Status.NOT_IMPLEMENTED).build();
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	
+    	try {
+    	    Basket result = basket.addItem(user.getId(), productId, item);
+    	    return Response.status(Status.CREATED).entity(result).build();
+    	} catch (BadRequestException e) {
+    	    if (e.getMessage().contains("already exists")) {
+    	        return Response.status(Status.CONFLICT).build();
+    	    }
+    	    return Response.status(Status.BAD_REQUEST).build();
+    	}
     }
 
     @DELETE
@@ -117,8 +131,10 @@ public class BasketResource {
             @Parameter(description = "ID of the product", required = true) @PathParam("productId") final String productId) {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
-    	// return basket with remaining balance
-        return Response.status(Status.NOT_IMPLEMENTED).build();
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	Basket result = basket.removeItem(user.getId(), productId);
+        return Response.ok(result).build();
     }
 
     @PATCH
@@ -136,8 +152,10 @@ public class BasketResource {
             @Parameter(description = "The number of that product in the basket", required = true) @jakarta.validation.Valid final Item item) {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
-    	// return basket with remaining balance
-        return Response.status(Status.NOT_IMPLEMENTED).build();
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	Basket result = basket.changeCount(user.getId(), productId, item);
+        return Response.ok(result).build();
     }
 
 }
