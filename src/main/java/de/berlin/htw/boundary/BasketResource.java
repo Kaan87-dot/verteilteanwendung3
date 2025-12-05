@@ -98,7 +98,7 @@ public class BasketResource {
     @APIResponse(responseCode = "409", description = "Another product with this ID already exist in the basket")
     public Response addItem(
             @Parameter(description = "ID of the product", required = true) @PathParam("productId") final String productId,
-            @Parameter(description = "The item to add in the basket", required = true) final Item item) {
+            @Parameter(description = "The item to add in the basket", required = true) @jakarta.validation.Valid final Item item) {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
     	// return basket with remaining balance
@@ -133,7 +133,7 @@ public class BasketResource {
     @APIResponse(responseCode = "404", description = "No product with this ID in the basket")
     public Response changeCount(
             @Parameter(description = "ID of the product", required = true) @PathParam("productId") final String productId,
-            @Parameter(description = "The number of that product in the basket", required = true) final Item item) {
+            @Parameter(description = "The number of that product in the basket", required = true) @jakarta.validation.Valid final Item item) {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
     	// return basket with remaining balance
