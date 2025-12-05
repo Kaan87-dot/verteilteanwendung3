@@ -60,6 +60,22 @@ class BasketResourceTest {
 
     @Test
     void testCheckout() {
+        // First add an item to the basket
+        String validItem = """
+            {
+                "productName": "Test Product",
+                "productId": "1-2-3-4-5-7",
+                "count": 1,
+                "price": 50.0
+            }
+            """;
+        
+        given()
+            .when().header("X-User-Id", "4")
+            .contentType(ContentType.JSON)
+            .body(validItem)
+            .post("/basket/1-2-3-4-5-7");
+        
         given()
             .log().all()
             .when().header("X-User-Id", "4")
@@ -67,7 +83,7 @@ class BasketResourceTest {
             .then()
             .log().all()
             .statusCode(201)
-            .header("Location", "http://localhost:8081/hierFehltNoEtwas");
+            .header("Location", "http://localhost:8081/orders");
     }
 
     @Test

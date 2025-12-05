@@ -29,6 +29,7 @@ import de.berlin.htw.boundary.dto.Basket;
 import de.berlin.htw.boundary.dto.Item;
 import de.berlin.htw.boundary.dto.Order;
 import de.berlin.htw.control.BasketController;
+import de.berlin.htw.control.OrderController;
 
 /**
  * @author Alexander Stanik [alexander.stanik@htw-berlin.de]
@@ -44,6 +45,9 @@ public class BasketResource {
     
     @Inject
     BasketController basket;
+    
+    @Inject
+    OrderController orderController;
 
     @Inject
     Logger logger;
@@ -84,9 +88,47 @@ public class BasketResource {
     public Response checkout() {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	
+    	// Get current basket
+    	Basket currentBasket = basket.getBasket(user.getId());
+    	
+    	// Check if basket is empty
+    	if (currentBasket.getItems() == null || currentBasket.getItems().isEmpty()) {
+    	    throw new BadRequestException("Basket is empty");
+    	}
+    	
+    	// Check if user has sufficient balance
+    	if (currentBasket.getRemainingBalance() < 0) {
+    	    throw new BadRequestException("Insufficient balance");
+    	}
+    	
+    	// Create order
+    	de.berlin.htw.entity.dto.OrderEntity orderEntity = orderController.createOrder(user.getId(), currentBasket);
+    	
+    	// Clear basket
+    	basket.clearBasket(user.getId());
+    	
+    	// Convert order entity to DTO
+    	Order orderDto = new Order();
+    	orderDto.setTotal(orderEntity.getTotal());
+    	
+    	java.util.List<Item> items = new java.util.ArrayList<>();
+    	for (de.berlin.htw.entity.dto.OrderItemEntity itemEntity : orderEntity.getItems()) {
+    	    Item item = new Item();
+    	    item.setProductId(itemEntity.getProductId());
+    	    item.setProductName(itemEntity.getProductName());
+    	    item.setCount(itemEntity.getCount());
+    	    item.setPrice(itemEntity.getPrice());
+    	    items.add(item);
+    	}
+    	orderDto.setItems(items);
+    	
     	// return the url of orders and the created order itself
         return Response
-        		.created(uri.getBaseUriBuilder().path("hierFehltNoEtwas").build())
+        		.created(uri.getBaseUriBuilder().path("orders").build())
+        		.entity(orderDto)
         		.build();
     }
 

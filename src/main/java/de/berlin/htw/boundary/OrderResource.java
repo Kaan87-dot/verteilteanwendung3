@@ -43,7 +43,8 @@ public class OrderResource {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
 
-        return order.todo();
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+        return order.getOrders(user.getId());
     }
 
 }
