@@ -120,7 +120,7 @@ public class BasketController {
         }
         
         // Store item
-        String itemValue = String.format("%s|%s|%d|%.2f", 
+        String itemValue = String.format(java.util.Locale.US, "%s|%s|%d|%.2f", 
             item.getProductId(), 
             item.getProductName(), 
             item.getCount(), 
