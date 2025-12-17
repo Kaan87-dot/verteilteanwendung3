@@ -98,11 +98,41 @@ public class BasketController {
         String key = getUserBasketKey(userId);
         String itemKey = getItemKey(productId);
         
-        // Check if item already exists
+        // Check if item already exists - if so, increment the count
         if (hashCommands.hexists(key, itemKey)) {
-            throw new BadRequestException("Product with ID " + productId + " already exists in basket");
+            // Get current item
+            String currentValue = hashCommands.hget(key, itemKey);
+            String[] parts = currentValue.split("\\|");
+            
+            // Calculate new count (current count + new count)
+            int currentCount = Integer.parseInt(parts[2]);
+            int newCount = currentCount + item.getCount();
+            
+            // Calculate new total
+            Basket currentBasket = getBasket(userId);
+            float oldItemTotal = currentCount * Float.parseFloat(parts[3]);
+            float newItemTotal = newCount * Float.parseFloat(parts[3]);
+            float newTotal = currentBasket.getTotal() - oldItemTotal + newItemTotal;
+            
+            // Check if user has sufficient balance
+            UserEntity user = userRepository.findUserById(userId);
+            if (user.getBalance() < newTotal) {
+                throw new BadRequestException("Insufficient balance to add more of this item");
+            }
+            
+            // Update item with new count
+            String itemValue = String.format(java.util.Locale.US, "%s|%s|%d|%s", 
+                parts[0], // productId
+                parts[1], // productName
+                newCount, // updated count
+                parts[3]); // price
+            hashCommands.hset(key, itemKey, itemValue);
+            
+            setBasketExpiration(userId);
+            return getBasket(userId);
         }
         
+        // Item doesn't exist - add as new item
         // Check if basket would exceed 10 items
         long itemCount = hashCommands.hlen(key);
         if (itemCount >= 10) {

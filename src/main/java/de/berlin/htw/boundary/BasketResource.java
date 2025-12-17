@@ -141,7 +141,6 @@ public class BasketResource {
         content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Basket.class)) )
     @APIResponse(responseCode = "400", description = "Invalid request message")
     @APIResponse(responseCode = "401", description = "No or wrong User Id provided as header")
-    @APIResponse(responseCode = "409", description = "Another product with this ID already exist in the basket")
     public Response addItem(
             @Parameter(description = "ID of the product", required = true) @PathParam("productId") final String productId,
             @Parameter(description = "The item to add in the basket", required = true) @jakarta.validation.Valid final Item item) {
@@ -150,15 +149,8 @@ public class BasketResource {
     	
     	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
     	
-    	try {
-    	    Basket result = basket.addItem(user.getId(), productId, item);
-    	    return Response.status(Status.CREATED).entity(result).build();
-    	} catch (BadRequestException e) {
-    	    if (e.getMessage().contains("already exists")) {
-    	        return Response.status(Status.CONFLICT).build();
-    	    }
-    	    return Response.status(Status.BAD_REQUEST).build();
-    	}
+    	Basket result = basket.addItem(user.getId(), productId, item);
+    	return Response.status(Status.CREATED).entity(result).build();
     }
 
     @DELETE

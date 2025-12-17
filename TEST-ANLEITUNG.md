@@ -157,6 +157,38 @@ curl -X DELETE "http://localhost:8080/basket" \
 # Erwartet: HTTP 204 (No Content)
 ```
 
+### NEU: Produkt mehrmals hinzufügen ✨
+
+```bash
+# Warenkorb leeren
+curl -X DELETE "http://localhost:8080/basket" -H "X-User-Id: 1"
+
+# 1. Erstes Hinzufügen: count=1
+curl -X POST "http://localhost:8080/basket/1-2-3-4-5-6" \
+  -H "X-User-Id: 1" \
+  -H "Content-Type: application/json" \
+  -d '{"productName":"Laptop","productId":"1-2-3-4-5-6","count":1,"price":50.0}'
+# Ergebnis: count=1, total=50.0
+
+# 2. Zweites Hinzufügen: count=2 wird addiert
+curl -X POST "http://localhost:8080/basket/1-2-3-4-5-6" \
+  -H "X-User-Id: 1" \
+  -H "Content-Type: application/json" \
+  -d '{"productName":"Laptop","productId":"1-2-3-4-5-6","count":2,"price":50.0}'
+# Ergebnis: count=3 (1+2), total=150.0
+
+# 3. Drittes Hinzufügen: count=1 wird addiert
+curl -X POST "http://localhost:8080/basket/1-2-3-4-5-6" \
+  -H "X-User-Id: 1" \
+  -H "Content-Type: application/json" \
+  -d '{"productName":"Laptop","productId":"1-2-3-4-5-6","count":1,"price":50.0}'
+# Ergebnis: count=4 (3+1), total=200.0
+
+# Oder verwende das Test-Script:
+chmod +x test-mehrfach-hinzufuegen.sh
+./test-mehrfach-hinzufuegen.sh
+```
+
 ### User-Isolation testen:
 
 ```bash

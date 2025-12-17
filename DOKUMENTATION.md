@@ -259,11 +259,43 @@ hashCommands.hset(key, itemKey, itemValue);
 - Effizient zu speichern
 - Keine JSON-Serialisierung nötig
 
+**Produkt mehrmals hinzufügen (NEU) ✨:**
+```java
+// Wenn Produkt bereits existiert, wird count erhöht
+if (hashCommands.hexists(key, itemKey)) {
+    String currentValue = hashCommands.hget(key, itemKey);
+    String[] parts = currentValue.split("\\|");
+    int currentCount = Integer.parseInt(parts[2]);
+    int newCount = currentCount + item.getCount(); // Addieren!
+    // ... Update mit newCount
+}
+```
+
+**Funktionsweise:**
+- **Erstes Hinzufügen:** Produkt mit count=1 → Warenkorb: count=1
+- **Zweites Hinzufügen:** Gleiches Produkt mit count=2 → Warenkorb: count=3 (1+2)
+- **Drittes Hinzufügen:** Gleiches Produkt mit count=1 → Warenkorb: count=4 (3+1)
+- **Ergebnis:** Nur 1 Artikel-Position im Warenkorb, aber mit erhöhter Anzahl
+
+**Vorher (Fehler):**
+```
+POST /basket/1-2-3-4-5-6 → count=1 ✅
+POST /basket/1-2-3-4-5-6 → HTTP 409 Conflict ❌
+```
+
+**Jetzt (Funktioniert):**
+```
+POST /basket/1-2-3-4-5-6 → count=1 ✅
+POST /basket/1-2-3-4-5-6 → count=3 (1+2) ✅
+POST /basket/1-2-3-4-5-6 → count=4 (3+1) ✅
+```
+
 **Best Practices:**
 - ✅ User-spezifische Keys für Isolation
 - ✅ Automatisches TTL-Management
 - ✅ Balance-Prüfung vor jeder Änderung
 - ✅ Atomare Redis-Operationen
+- ✅ Produkt mehrmals hinzufügbar (count wird addiert)
 
 ---
 
