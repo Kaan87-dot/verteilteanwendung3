@@ -1,6 +1,7 @@
 package de.berlin.htw.boundary;
 
 import jakarta.inject.Inject;
+import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -28,6 +29,7 @@ import de.berlin.htw.boundary.dto.Basket;
 import de.berlin.htw.boundary.dto.Item;
 import de.berlin.htw.boundary.dto.Order;
 import de.berlin.htw.control.BasketController;
+import de.berlin.htw.control.OrderController;
 
 /**
  * @author Alexander Stanik [alexander.stanik@htw-berlin.de]
@@ -43,6 +45,9 @@ public class BasketResource {
     
     @Inject
     BasketController basket;
+    
+    @Inject
+    OrderController orderController;
 
     @Inject
     Logger logger;
@@ -56,7 +61,8 @@ public class BasketResource {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
     	
-        return basket.todo();
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+        return basket.getBasket(user.getId());
     }
 
     @DELETE
@@ -66,7 +72,9 @@ public class BasketResource {
     public void clearBasket() {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
-    	// no content
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	basket.clearBasket(user.getId());
     }
 
     @POST
@@ -80,9 +88,47 @@ public class BasketResource {
     public Response checkout() {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	
+    	// Get current basket
+    	Basket currentBasket = basket.getBasket(user.getId());
+    	
+    	// Check if basket is empty
+    	if (currentBasket.getItems() == null || currentBasket.getItems().isEmpty()) {
+    	    throw new BadRequestException("Basket is empty");
+    	}
+    	
+    	// Check if user has sufficient balance
+    	if (currentBasket.getRemainingBalance() < 0) {
+    	    throw new BadRequestException("Insufficient balance");
+    	}
+    	
+    	// Create order
+    	de.berlin.htw.entity.dto.OrderEntity orderEntity = orderController.createOrder(user.getId(), currentBasket);
+    	
+    	// Clear basket
+    	basket.clearBasket(user.getId());
+    	
+    	// Convert order entity to DTO
+    	Order orderDto = new Order();
+    	orderDto.setTotal(orderEntity.getTotal());
+    	
+    	java.util.List<Item> items = new java.util.ArrayList<>();
+    	for (de.berlin.htw.entity.dto.OrderItemEntity itemEntity : orderEntity.getItems()) {
+    	    Item item = new Item();
+    	    item.setProductId(itemEntity.getProductId());
+    	    item.setProductName(itemEntity.getProductName());
+    	    item.setCount(itemEntity.getCount());
+    	    item.setPrice(itemEntity.getPrice());
+    	    items.add(item);
+    	}
+    	orderDto.setItems(items);
+    	
     	// return the url of orders and the created order itself
         return Response
-        		.created(uri.getBaseUriBuilder().path("hierFehltNoEtwas").build())
+        		.created(uri.getBaseUriBuilder().path("orders").build())
+        		.entity(orderDto)
         		.build();
     }
 
@@ -95,14 +141,16 @@ public class BasketResource {
         content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Basket.class)) )
     @APIResponse(responseCode = "400", description = "Invalid request message")
     @APIResponse(responseCode = "401", description = "No or wrong User Id provided as header")
-    @APIResponse(responseCode = "409", description = "Another product with this ID already exist in the basket")
     public Response addItem(
             @Parameter(description = "ID of the product", required = true) @PathParam("productId") final String productId,
-            @Parameter(description = "The item to add in the basket", required = true) final Item item) {
+            @Parameter(description = "The item to add in the basket", required = true) @jakarta.validation.Valid final Item item) {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
-    	// return basket with remaining balance
-        return Response.status(Status.NOT_IMPLEMENTED).build();
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	
+    	Basket result = basket.addItem(user.getId(), productId, item);
+    	return Response.status(Status.CREATED).entity(result).build();
     }
 
     @DELETE
@@ -117,8 +165,10 @@ public class BasketResource {
             @Parameter(description = "ID of the product", required = true) @PathParam("productId") final String productId) {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
-    	// return basket with remaining balance
-        return Response.status(Status.NOT_IMPLEMENTED).build();
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	Basket result = basket.removeItem(user.getId(), productId);
+        return Response.ok(result).build();
     }
 
     @PATCH
@@ -133,11 +183,13 @@ public class BasketResource {
     @APIResponse(responseCode = "404", description = "No product with this ID in the basket")
     public Response changeCount(
             @Parameter(description = "ID of the product", required = true) @PathParam("productId") final String productId,
-            @Parameter(description = "The number of that product in the basket", required = true) final Item item) {
+            @Parameter(description = "The number of that product in the basket", required = true) @jakarta.validation.Valid final Item item) {
     	logger.info(context.getUserPrincipal().getName() 
     			+ " is calling " + uri.getAbsolutePath());
-    	// return basket with remaining balance
-        return Response.status(Status.NOT_IMPLEMENTED).build();
+    	
+    	de.berlin.htw.entity.dto.UserEntity user = (de.berlin.htw.entity.dto.UserEntity) context.getUserPrincipal();
+    	Basket result = basket.changeCount(user.getId(), productId, item);
+        return Response.ok(result).build();
     }
 
 }

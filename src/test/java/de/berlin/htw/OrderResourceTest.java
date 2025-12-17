@@ -26,7 +26,7 @@ class OrderResourceTest {
         	.get("/orders")
         	.then()
         	.log().all()
-        	.statusCode(415);
+        	.statusCode(200);
     }
 
 }
